@@ -1,0 +1,10 @@
+**/node_modules
+**/.next
+**/target
+**/data
+**/.env*
+**/.git
+**/*.log
+legacy
+package.jso
+backups

@@ -1,0 +1,47 @@
+{
+  "name": "nexadvisor",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "next typegen && tsc --noEmit",
+    "format": "prettier --write src next.config.mjs",
+    "format:check": "prettier --check src next.config.mjs",
+    "test:calendar": "node scripts/test-calendar.cjs",
+    "test:api": "node scripts/test-api.cjs"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.24.1",
+    "framer-motion": "^12.0.0",
+    "i18next": "^23.8.2",
+    "lucide-react": "^0.468.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-error-boundary": "^4.0.12",
+    "react-hot-toast": "^2.4.1",
+    "react-i18next": "^14.0.5",
+    "next": "16.3.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "autoprefixer": "^10.4.18",
+    "eslint": "^9.9.1",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^15.9.0",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3",
+    "@types/node": "^22.0.0",
+    "@eslint/js": "^9.9.1",
+    "typescript-eslint": "^8.3.0",
+    "prettier": "^3.6.2"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  }
+}

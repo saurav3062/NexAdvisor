@@ -1,0 +1,53 @@
+name: Verify MVP
+on: [push, pull_request]
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run test:calendar
+      - run: node scripts/test-deployment.mjs
+      - run: node scripts/test-api.cjs
+      - run: npm run build
+  backend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        database: [h2, postgres]
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: nexadvisor_test
+          POSTGRES_USER: nexadvisor
+          POSTGRES_PASSWORD: ci-test-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: H2 integration suite
+        if: matrix.database == 'h2'
+        working-directory: backend
+        run: mvn -B verify
+      - name: PostgreSQL integration suite
+        if: matrix.database == 'postgres'
+        working-directory: backend
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/nexadvisor_test
+          SPRING_DATASOURCE_USERNAME: nexadvisor
+          SPRING_DATASOURCE_PASSWORD: ci-test-only
+        run: mvn -B verify

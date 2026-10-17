@@ -1,0 +1,59 @@
+name: nexadvisor
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nexadvisor
+      POSTGRES_USER: nexadvisor
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD in deploy/.env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U nexadvisor -d nexadvisor']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  api:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      BIND_ADDRESS: 0.0.0.0
+      PORT: 8081
+      DATABASE_URL: jdbc:postgresql://db:5432/nexadvisor
+      DATABASE_USER: nexadvisor
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD}
+      COOKIE_SECURE: 'true'
+      PAYMENT_SIMULATION_ENABLED: 'true'
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?Set PUBLIC_ORIGIN}
+      MAIL_MODE: PREVIEW
+      NEXADVISOR_MAIL_PREVIEW_ENABLED: 'true'
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    volumes:
+      - mail-previews:/app/data/mail-preview
+  web:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        BACKEND_URL: http://api:8081
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - '127.0.0.1:${WEB_PORT:-3000}:3000'
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+volumes:
+  postgres-data:
+  mail-previews:

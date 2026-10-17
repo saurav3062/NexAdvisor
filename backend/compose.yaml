@@ -1,0 +1,11 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: nexadvisor
+      POSTGRES_USER: nexadvisor
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD}
+    ports: ["127.0.0.1:5433:5432"]
+    volumes: ["nexadvisor-db:/var/lib/postgresql/data"]
+volumes:
+  nexadvisor-db:
