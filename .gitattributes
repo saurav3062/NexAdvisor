@@ -1,0 +1,4 @@
+
+# Unix launchers must retain LF on Windows checkouts.
+*.sh text eol=lf
+backend/mvnw text eol=lf

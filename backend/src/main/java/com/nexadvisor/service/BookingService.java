@@ -53,6 +53,7 @@ public class BookingService {
   public Booking lockOwned(UUID actor, UUID id) {
     var b = owned(actor, id);
     locks.lockParticipants(b.clientId(), b.expertAccountId());
+    accounts.get(actor);
     return owned(actor, id);
   }
 
@@ -82,28 +83,27 @@ public class BookingService {
     var e = experts.published(id);
     ApiException.require(
         duration == 30 || duration == 60, 400, "Duration must be 30 or 60 minutes");
+    var zone = ZoneId.of(e.scheduleTimezone());
+    var today = LocalDate.now(clock.withZone(zone));
     ApiException.require(
-        !date.isBefore(LocalDate.now(clock)) && !date.isAfter(LocalDate.now(clock).plusDays(90)),
+        !date.isBefore(today) && !date.isAfter(today.plusDays(90)),
         400,
         "Choose a date within the next 90 days");
     var result = new ArrayList<Slot>();
-    for (var h : experts.hours(id))
-      if (h.dayOfWeek() == date.getDayOfWeek().getValue())
-        for (int minute = h.startMinute(); minute + duration <= h.endMinute(); minute += 30) {
-          Instant start = date.atStartOfDay(ZoneOffset.UTC).plusMinutes(minute).toInstant();
-          Instant end = start.plusSeconds(duration * 60L);
-          if (start.isAfter(clock.instant()))
-            result.add(
-                new Slot(
-                    start.toString(),
-                    start,
-                    end,
-                    duration,
-                    !bookings.expertBusy(id, start, end, clock.instant())
-                        && !timeOff.overlaps(id, start, end),
-                    price(e, duration),
-                    e.currency()));
-        }
+    for (var start : ScheduleTimes.starts(date, zone, experts.hours(id), duration)) {
+      var end = start.plusSeconds(duration * 60L);
+      if (start.isAfter(clock.instant()))
+        result.add(
+            new Slot(
+                start.toString(),
+                start,
+                end,
+                duration,
+                !bookings.expertBusy(id, start, end, clock.instant())
+                    && !timeOff.overlaps(id, start, end),
+                price(e, duration),
+                e.currency()));
+    }
     return result;
   }
 
@@ -123,7 +123,7 @@ public class BookingService {
       var b = prior.get();
       ApiException.require(
           b.expertId().equals(in.expertId())
-              && b.startsAt().equals(in.startsAt())
+              && bookings.originalStart(b.id()).equals(in.startsAt())
               && Duration.between(b.startsAt(), b.endsAt()).toMinutes() == in.durationMinutes()
               && b.notes().equals(in.notes().strip()),
           409,
@@ -137,7 +137,10 @@ public class BookingService {
         400,
         "Choose a future date within 90 days");
     var slots =
-        slots(e.id(), in.startsAt().atZone(ZoneOffset.UTC).toLocalDate(), in.durationMinutes());
+        slots(
+            e.id(),
+            in.startsAt().atZone(ZoneId.of(e.scheduleTimezone())).toLocalDate(),
+            in.durationMinutes());
     var slot =
         slots.stream()
             .filter(s -> s.startTime().equals(in.startsAt()))
@@ -194,6 +197,12 @@ public class BookingService {
         !b.status().equals("COMPLETED") && clock.instant().isBefore(b.startsAt()),
         409,
         "Only future sessions can be cancelled");
+    ApiException.require(
+        !b.paymentStatus().equals("SIMULATED_PAID")
+            || actor.equals(b.expertAccountId())
+            || !clock.instant().isAfter(b.startsAt().minusSeconds(3600)),
+        409,
+        "Within one hour of the session, request cancellation through Support for review");
     payments.refund(id);
     bookings.status(id, "CANCELLED");
     bookings.event(

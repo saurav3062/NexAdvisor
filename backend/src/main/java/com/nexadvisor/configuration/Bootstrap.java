@@ -28,6 +28,9 @@ public class Bootstrap {
 
   @Bean
   @org.springframework.context.annotation.Profile("demo")
+  @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+      name = "nexadvisor.demo.seed-enabled",
+      havingValue = "true")
   ApplicationRunner demo(
       AccountRepository accounts, ExpertRepository experts, PasswordEncoder passwords) {
     return args -> {

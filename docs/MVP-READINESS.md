@@ -2,7 +2,7 @@
 
 Scope: an invitation-only expert-booking pilot with simulated payments. The original blue-and-white UI and Java/Spring/PostgreSQL stack are retained. This is not a real-money marketplace.
 
-## Status — 17 October 2026
+## Status — 19 October 2026
 
 The implemented client/expert flows have passed local acceptance and are ready for
 an operator-assisted pilot. Payments and email remain simulated; Zoom/Google Meet
@@ -11,7 +11,7 @@ calls use expert-provided links. See [BOOKING-PILOT.md](BOOKING-PILOT.md).
 The latest pass fixes expired-session state, sign-out routing, server-unavailable
 session recovery, and duplicate review responses. A route error page supports
 retry without silently repeating booking actions. Frontend API regression tests
-are included in CI. All 35 backend tests pass on H2 and PostgreSQL.
+are included in CI. Current reliability coverage and launch gates are recorded in [LAUNCH-GATE.md](LAUNCH-GATE.md).
 
 A PostgreSQL backup was restored into a separate test database, record counts
 matched, and the application successfully logged in and loaded a restored booking.
@@ -21,7 +21,7 @@ and an actual provider meeting/device check remain the launch prerequisites belo
 
 ## Implemented product flows
 - Client signup, email verification, login, password recovery and profile editing.
-- Expert profile submission, admin approval/rejection and weekly UTC schedule editing.
+- Expert profile submission, admin approval/rejection and weekly expert-local schedule editing with named timezones and daylight-saving handling.
 - Expert time off entered in the device timezone and stored as UTC instants; overlapping reservations are rejected. Existing bookings are never silently cancelled.
 - Search, categories, ratings, saved-expert shortlist and profile detail.
 - 30/60 minute booking, server pricing, 15-minute unpaid holds, concurrency protection and simulated confirmation/refunds.
@@ -46,4 +46,8 @@ Deployment packaging, configuration validation, and backup/restore commands are 
 6. Run the acceptance flow on the actual deployment and physical iOS/Android devices. Confirm preview emails, cookies, origin, timezone display and external Zoom/Google Meet behavior, including provider admission settings.
 
 ## Deliberately outside this MVP
-Real payments/payouts, native video, automated meeting creation, in-app rescheduling, local-time recurring schedule rules/DST (weekly schedules remain explicitly UTC), shared multi-instance rate limiting and self-service account deletion. To move a booking, cancel and rebook; simulated refunds are recorded. Messages poll rather than use WebSockets. No production deployment has been performed.
+Real payments/payouts, native video and automated meeting creation. In-app mutual rescheduling, expert-local recurring hours with DST handling, and guarded self-service closure are now implemented. Messages poll rather than use WebSockets. No production deployment has been performed.
+
+## Launch operations extension — 17 October 2026
+
+See [LAUNCH-OPERATIONS.md](LAUNCH-OPERATIONS.md) for support cases, simulated commission/payout accounting, account deletion, pilot policies, Cashfree receipt verification and host operations tooling. These supersede the earlier manual support/deletion limitations. Actual hosting, off-host backup/restore, legal/business completion and physical meeting acceptance remain pending.

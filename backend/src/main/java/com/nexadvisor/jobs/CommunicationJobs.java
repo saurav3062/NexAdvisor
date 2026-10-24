@@ -35,11 +35,15 @@ public class CommunicationJobs {
   @Scheduled(fixedDelay = 10000, initialDelay = 10000)
   public void deliver() {
     mail.purgeSecrets(clock.instant());
-    for (var id : mail.due(clock.instant())) delivery.deliver(id);
+    JobBatch.run("mail-delivery", mail.due(clock.instant()), delivery::deliver);
   }
 
   @Scheduled(fixedDelay = 60000, initialDelay = 60000)
   public void reminders() {
-    for (var id : bookings.reminders(clock.instant())) notices.remind(id);
+    JobBatch.run("booking-reminders", bookings.reminders(clock.instant()), notices::remind);
+    JobBatch.run(
+        "missing-links",
+        bookings.missingLinkReminders(clock.instant()),
+        notices::remindMissingLink);
   }
 }

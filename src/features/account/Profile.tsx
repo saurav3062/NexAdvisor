@@ -14,6 +14,12 @@ export function Profile() {
   });
   return (
     <Workspace title="Your profile">
+      <Link
+        className="text-blue-600 inline-block mb-4"
+        href="/privacy-requests"
+      >
+        Privacy & account closure
+      </Link>
       <p className="mb-6 max-w-2xl text-slate-600">
         {user?.role === "expert"
           ? "Keep your personal details up to date. Your portrait, professional bio and schedule live in your expert profile."

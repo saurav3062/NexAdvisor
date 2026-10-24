@@ -8,6 +8,7 @@ export interface Account {
   location: string;
 }
 export interface ExpertProfile {
+  scheduleTimezone: string;
   photoVersion: string;
   id: string;
   accountId: string;
@@ -99,6 +100,7 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    public requestId?: string,
   ) {
     super(message);
   }
@@ -108,13 +110,62 @@ let token: Promise<{ token: string; headerName: string }> | undefined;
 export function clearCsrf() {
   token = undefined;
 }
+async function request(
+  path: string,
+  method = "GET",
+  body?: unknown,
+  headers: Record<string, string> = {},
+) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  try {
+    const response = await fetch("/api/v1" + path, {
+      method,
+      headers,
+      credentials: "include",
+      cache: "no-store",
+      signal: controller.signal,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const text = await response.text();
+    let data: unknown = null;
+    let malformed = false;
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        malformed = true; /* Proxies may return an HTML error. */
+      }
+    }
+    if (response.ok && malformed)
+      throw new ApiError(
+        502,
+        "The server returned an unexpected response. Check the current status before retrying.",
+      );
+    return { response, data };
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(
+      0,
+      method === "GET"
+        ? "Could not load data. Check your connection and try again."
+        : "Could not confirm the result. Check the latest status before trying again; your change may have been saved.",
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+}
 async function csrf() {
   if (!token)
-    token = fetch("/api/v1/csrf", { credentials: "include", cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok)
-          throw new ApiError(response.status, "Could not initialize session");
-        return response.json();
+    token = request("/csrf")
+      .then(({ response, data }) => {
+        const result = data as { token?: string; headerName?: string } | null;
+        if (!response.ok || !result?.token || !result.headerName)
+          throw new ApiError(
+            response.status,
+            "Could not initialize your session. Refresh and try again.",
+          );
+        return { token: result.token, headerName: result.headerName };
       })
       .catch((error) => {
         token = undefined;
@@ -133,13 +184,7 @@ export async function api<T>(
     const auth = await csrf();
     headers[auth.headerName] = auth.token;
   }
-  const response = await fetch("/api/v1" + path, {
-    method,
-    headers,
-    credentials: "include",
-    cache: "no-store",
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  const { response, data } = await request(path, method, body, headers);
   if (!response.ok) {
     if (response.status === 401 && !path.startsWith("/auth/")) {
       clearCsrf();
@@ -147,19 +192,28 @@ export async function api<T>(
         window.dispatchEvent(new Event(SESSION_EXPIRED));
     }
     if (response.status === 403) clearCsrf();
-    const problem = await response.json().catch(() => null);
+    const problem = data as { message?: string; requestId?: string } | null;
+    const reference =
+      problem?.requestId || response.headers.get("X-Request-ID") || undefined;
+    const message =
+      problem?.message ||
+      (response.status === 401
+        ? "Please sign in to continue"
+        : response.status === 403
+          ? "This action is not allowed. Refresh and try again."
+          : response.status === 429
+            ? "Too many requests. Please wait before trying again."
+            : response.status >= 500
+              ? "The service is temporarily unavailable. Check the current status before retrying a change."
+              : "The request failed. Please try again.");
     throw new ApiError(
       response.status,
-      problem?.message ||
-        (response.status === 401
-          ? "Please sign in to continue"
-          : response.status === 403
-            ? "This action is not allowed. Refresh and try again."
-            : "The request failed. Please try again."),
+      message +
+        (response.status >= 500 && reference ? ` Reference: ${reference}` : ""),
+      reference,
     );
   }
-  const text = await response.text();
-  return (text ? JSON.parse(text) : null) as T;
+  return data as T;
 }
 export const money = (amountMinor: number, currency = "USD") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency }).format(

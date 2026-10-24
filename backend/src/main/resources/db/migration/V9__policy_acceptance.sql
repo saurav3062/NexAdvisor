@@ -1,0 +1,1 @@
+CREATE TABLE policy_acceptances(account_id UUID NOT NULL REFERENCES accounts(id), version VARCHAR(30) NOT NULL, accepted_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(account_id,version));

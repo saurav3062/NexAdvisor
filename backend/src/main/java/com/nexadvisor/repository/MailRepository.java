@@ -72,6 +72,13 @@ public class MailRepository {
         .list();
   }
 
+  public java.util.Optional<UUID> bookingId(UUID id) {
+    return db.sql("SELECT booking_id FROM mail_outbox WHERE id=? AND booking_id IS NOT NULL")
+        .param(id)
+        .query(UUID.class)
+        .optional();
+  }
+
   public Mail lock(UUID id) {
     return db.sql(
             "SELECT id,recipient,subject,body,sensitive,status,attempts,next_attempt_at,expires_at,booking_id,notification_kind FROM mail_outbox WHERE id=? FOR UPDATE")

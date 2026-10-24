@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 import { ExpertAvatar } from "@/features/experts/ExpertAvatar";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +18,12 @@ export function ExpertApproval() {
   });
   return (
     <Workspace title="Expert applications">
+      <Link
+        href="/admin/operations"
+        className="inline-block text-blue-600 mb-6"
+      >
+        Open operations desk →
+      </Link>
       <QueryState loading={q.isLoading} error={q.error} />
       {q.data?.length === 0 && <p>No pending applications.</p>}
       <div className="space-y-5">
@@ -49,8 +56,8 @@ function Application({ expert: e }: { expert: ExpertProfile }) {
         {e.name} · {e.title}
       </h2>
       <p>
-        {e.category} · {e.yearsExperience} years · {money(e.hourlyRateMinor)} /
-        hour
+        {e.category} · {e.yearsExperience} years ·{" "}
+        {money(e.hourlyRateMinor, e.currency)} / hour
       </p>
       <p className="my-4 whitespace-pre-wrap">{e.bio}</p>
       <label className="block">

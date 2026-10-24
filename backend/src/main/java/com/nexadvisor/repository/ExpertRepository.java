@@ -11,7 +11,7 @@ public class ExpertRepository {
   private final JdbcClient db;
   private static final String SELECT =
       """
- SELECT e.id,e.account_id,a.name,e.category_id,c.name AS category,e.title,e.bio,e.hourly_rate_minor,e.currency,e.years_experience,e.status,e.review_note,a.location,e.photo_version,
+ SELECT e.id,e.account_id,a.name,e.category_id,c.name AS category,e.title,e.bio,e.hourly_rate_minor,e.currency,e.years_experience,e.status,e.review_note,a.location,e.photo_version,e.schedule_timezone,
  COALESCE((SELECT AVG(CAST(r.rating AS DOUBLE PRECISION)) FROM reviews r JOIN bookings b ON b.id=r.booking_id WHERE b.expert_id=e.id),0) AS rating,
  (SELECT COUNT(*) FROM reviews r JOIN bookings b ON b.id=r.booking_id WHERE b.expert_id=e.id) AS review_count
  FROM experts e JOIN accounts a ON a.id=e.account_id JOIN categories c ON c.id=e.category_id
@@ -19,6 +19,10 @@ public class ExpertRepository {
 
   public ExpertRepository(JdbcClient db) {
     this.db = db;
+  }
+
+  public void timezone(UUID id, String zone) {
+    db.sql("UPDATE experts SET schedule_timezone=? WHERE id=?").params(zone, id).update();
   }
 
   public String photo(UUID id) {

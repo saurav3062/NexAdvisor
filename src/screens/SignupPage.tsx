@@ -64,7 +64,7 @@ export function SignupPage() {
     }
 
     if (!agreeTerms) {
-      errors.terms = "Please acknowledge that payments are simulated";
+      errors.terms = "Please accept the pilot policies and simulated payments";
     }
 
     setFieldErrors(errors);
@@ -344,8 +344,16 @@ export function SignupPage() {
                   htmlFor="terms"
                   className="ml-2 block text-sm text-gray-700"
                 >
-                  I understand this is a demo platform and payments are
-                  simulated. No real money is charged.
+                  I agree to the{" "}
+                  <Link
+                    className="text-blue-600 underline"
+                    href="/policies"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    pilot terms, privacy notice and cancellation policy
+                  </Link>
+                  . Payments are simulated; no real money is charged.
                 </label>
               </div>
 

@@ -1,0 +1,14 @@
+[Unit]
+Description=NexAdvisor Encrypted off-host PostgreSQL backup
+After=network-online.target docker.service
+Wants=network-online.target
+[Service]
+Type=oneshot
+User=nexadvisor-ops
+WorkingDirectory=/opt/NexAdvisor
+EnvironmentFile=/etc/nexadvisor/ops.env
+ExecStart=/usr/bin/node scripts/operations/backup.mjs
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+TimeoutStartSec=3600

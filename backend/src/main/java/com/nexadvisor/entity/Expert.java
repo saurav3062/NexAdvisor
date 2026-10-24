@@ -18,7 +18,8 @@ public record Expert(
     String location,
     double rating,
     long reviewCount,
-    String photoVersion) {
+    String photoVersion,
+    String scheduleTimezone) {
   public Expert publicView() {
     return new Expert(
         id,
@@ -36,6 +37,7 @@ public record Expert(
         location,
         rating,
         reviewCount,
-        photoVersion);
+        photoVersion,
+        scheduleTimezone);
   }
 }

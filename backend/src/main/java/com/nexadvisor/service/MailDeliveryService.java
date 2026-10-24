@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class MailDeliveryService {
   private final MailRepository mail;
+  private final com.nexadvisor.repository.AccountRepository accounts;
   private final com.nexadvisor.repository.BookingRepository bookings;
   private final MailSettings settings;
   private final Clock clock;
@@ -24,7 +25,9 @@ public class MailDeliveryService {
       MailSettings s,
       Clock c,
       ObjectProvider<JavaMailSender> p,
-      com.nexadvisor.repository.BookingRepository b) {
+      com.nexadvisor.repository.BookingRepository b,
+      com.nexadvisor.repository.AccountRepository accounts) {
+    this.accounts = accounts;
     bookings = b;
     mail = m;
     settings = s;
@@ -34,6 +37,9 @@ public class MailDeliveryService {
 
   @Transactional
   public void deliver(UUID id) {
+    mail.bookingId(id)
+        .flatMap(bookings::find)
+        .ifPresent(b -> accounts.lockParticipants(b.clientId(), b.expertAccountId()));
     var m = mail.lock(id);
     var now = clock.instant();
     if (!m.status().equals("PENDING") || m.nextAttemptAt().isAfter(now)) return;
@@ -48,6 +54,12 @@ public class MailDeliveryService {
         mail.expire(id);
         return;
       }
+    }
+    if (m.bookingId() != null
+        && m.notificationKind().equals("LINK_REQUIRED")
+        && !bookings.missingLink(m.bookingId())) {
+      mail.expire(id);
+      return;
     }
     try {
       if (settings.mode.equals("PREVIEW")) {

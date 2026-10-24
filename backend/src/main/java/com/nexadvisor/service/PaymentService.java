@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PaymentService {
   private final BookingService bookings;
+  private final AccountRepository accountStates;
   private final BookingRepository repository;
   private final PaymentRepository payments;
   private final boolean enabled;
@@ -24,7 +25,9 @@ public class PaymentService {
       PaymentRepository p,
       @Value("${nexadvisor.payments.simulation-enabled:false}") boolean enabled,
       Clock c,
-      BookingNotificationService notices) {
+      BookingNotificationService notices,
+      AccountRepository accountStates) {
+    this.accountStates = accountStates;
     this.notices = notices;
     bookings = b;
     repository = r;
@@ -44,6 +47,10 @@ public class PaymentService {
     ApiException.require(
         b.clientId().equals(actor), 403, "Only the booking client can simulate payment");
     if (b.paymentStatus().equals("SIMULATED_PAID")) return b;
+    ApiException.require(
+        accountStates.find(b.expertAccountId()).isPresent(),
+        409,
+        "This expert cannot accept payments right now; cancel the reservation or contact support");
     ApiException.require(
         b.status().equals("PENDING")
             && clock.instant().isBefore(b.startsAt())

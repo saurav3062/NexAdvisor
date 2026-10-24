@@ -1,4 +1,5 @@
 "use client";
+import { dateInZone, slotTime } from "@/lib/timezones";
 import { FavoriteButton } from "./Favorites";
 import { ExpertAvatar } from "./ExpertAvatar";
 import { useState, useRef } from "react";
@@ -26,7 +27,7 @@ export function ExpertDetail() {
   const { user } = useAuth();
   const router = useRouter();
   const cache = useQueryClient();
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [chosenDate, setDate] = useState("");
   const [duration, setDuration] = useState(60);
   const [selected, setSelected] = useState("");
   const [notes, setNotes] = useState("");
@@ -35,6 +36,8 @@ export function ExpertDetail() {
     queryKey: ["expert", id],
     queryFn: () => api<ExpertProfile>("/experts/" + id),
   });
+  const timezone = expert.data?.scheduleTimezone || "UTC";
+  const date = chosenDate || dateInZone(new Date(), timezone);
   const slots = useQuery({
     queryKey: ["slots", id, date, duration],
     queryFn: () =>
@@ -44,7 +47,7 @@ export function ExpertDetail() {
           "/availability?" +
           new URLSearchParams({ date, duration: String(duration) }),
       ),
-    enabled: !!date,
+    enabled: !!date && !!expert.data,
     staleTime: 15000,
     refetchInterval: 30000,
   });
@@ -62,6 +65,9 @@ export function ExpertDetail() {
         notes,
         requestKey: requestKey.current,
       });
+    },
+    onError: () => {
+      cache.invalidateQueries({ queryKey: ["slots", id] });
     },
     onSuccess: () => {
       cache.invalidateQueries({ queryKey: ["bookings"] });
@@ -117,8 +123,8 @@ export function ExpertDetail() {
               {money(e.hourlyRateMinor, e.currency)} / hour
             </p>
             <p className="text-sm text-gray-500 mb-4">
-              Availability is shown in UTC. Booking confirmation requires a
-              simulated payment.
+              Availability dates and times use {timezone}. Booking confirmation
+              requires a simulated payment.
             </p>
             <label className="block">
               Date
@@ -128,10 +134,8 @@ export function ExpertDetail() {
                 aria-label="Session date"
                 className={input}
                 value={date}
-                min={new Date().toISOString().slice(0, 10)}
-                max={new Date(Date.now() + 89 * 86400000)
-                  .toISOString()
-                  .slice(0, 10)}
+                min={dateInZone(new Date(), timezone)}
+                max={dateInZone(new Date(Date.now() + 89 * 86400000), timezone)}
                 onChange={(event) => {
                   setDate(event.target.value);
                   changeSelection();
@@ -172,7 +176,7 @@ export function ExpertDetail() {
                       : "bg-white")
                   }
                 >
-                  {s.startTime.slice(11, 16)}
+                  {slotTime(s.startTime, timezone)}
                 </button>
               ))}
             </div>
@@ -228,7 +232,13 @@ export function ExpertDetail() {
               </Link>
             ) : (
               <button
-                disabled={!selected || book.isPending}
+                disabled={
+                  !selected ||
+                  book.isPending ||
+                  !slots.data?.some(
+                    (s) => s.startTime === selected && s.available,
+                  )
+                }
                 className={button + " mt-4 w-full"}
                 onClick={() => book.mutate()}
               >

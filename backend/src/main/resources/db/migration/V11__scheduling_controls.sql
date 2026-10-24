@@ -1,0 +1,9 @@
+ALTER TABLE experts ADD COLUMN schedule_timezone VARCHAR(80) NOT NULL DEFAULT 'UTC';
+ALTER TABLE accounts ADD COLUMN suspended BOOLEAN NOT NULL DEFAULT FALSE;
+CREATE TABLE reschedule_requests (
+ id UUID PRIMARY KEY, booking_id UUID NOT NULL REFERENCES bookings(id), requester_id UUID NOT NULL REFERENCES accounts(id),
+ original_start TIMESTAMP WITH TIME ZONE NOT NULL, proposed_start TIMESTAMP WITH TIME ZONE NOT NULL,
+ status VARCHAR(16) NOT NULL DEFAULT 'PENDING' CHECK(status IN ('PENDING','ACCEPTED','DECLINED')),
+ created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX reschedule_booking ON reschedule_requests(booking_id,created_at);

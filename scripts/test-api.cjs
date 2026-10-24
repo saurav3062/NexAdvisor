@@ -18,6 +18,9 @@ const code = ts.transpileModule(
 vm.runInNewContext(code, {
   exports: apiExports,
   Event,
+  AbortController,
+  setTimeout,
+  clearTimeout,
   window: { dispatchEvent: (event) => events.push(event.type) },
   fetch: async (url, options) => {
     requests.push({ url, options });
@@ -66,13 +69,22 @@ const json = (data, status = 200) =>
   responses.push(new Error("Connection interrupted"));
   await assert.rejects(
     apiExports.api("/bookings", "POST", {}),
-    /Connection interrupted/,
+    /Could not confirm the result/,
   );
   assert.equal(
     requests.length,
     beforeFailure + 1,
     "Never automatically replay a failed mutation",
   );
+  responses.push(new Response("<html>Bad gateway</html>",{status:502,headers:{"X-Request-ID":"test-reference"}}));
+  await assert.rejects(apiExports.api("/me/bookings"),error=>error.status===502&&error.requestId==="test-reference"&&error.message.includes("Reference: test-reference"));
+  responses.push(new DOMException("Timed out","AbortError"));
+  await assert.rejects(apiExports.api("/me/bookings"),error=>error.status===0&&error.message.includes("Check your connection"));
+  assert.ok(requests.at(-1).options.signal instanceof AbortSignal);
+  responses.push(new Response("not-json",{status:200}));
+  await assert.rejects(apiExports.api("/me/bookings"),{status:502});
+  responses.push(json({message:"Wait"},429));
+  await assert.rejects(apiExports.api("/me/bookings"),{status:429});
   assert.equal(responses.length, 0);
   console.log(
     "PASS: session expiry, login failure isolation, CSRF renewal and no automatic mutation replay",

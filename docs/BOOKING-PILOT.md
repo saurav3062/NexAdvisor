@@ -9,7 +9,7 @@ The original interface and backend architecture are retained.
 Use PostgreSQL for hosted appointments and the deployment guide for HTTPS, backups
 and private API access. The local demo uses its existing H2 file. Do not run tests
 against either live database. Bootstrap an administrator and approve only actual
-experts. Review rates, weekly UTC hours, and time off before invitations.
+experts. Review rates, weekly hours and the expert’s named timezone, and time off before invitations.
 
 Email verification is still required; simulation does not bypass identity gates.
 Preview messages are saved in `backend/data/mail-preview` locally or the private
@@ -20,7 +20,7 @@ Never publish the preview directory. This is an assisted pilot onboarding flow.
 
 ## Appointment flow
 
-1. Client chooses the expert and UTC slot, checks the displayed local time, then
+1. Client chooses the expert and slot in the expert’s timezone, checks the displayed local time, then
    reserves it. The client and expert cannot have overlapping active reservations.
 2. The reservation lasts up to 15 minutes, capped at the session start. The client
    confirms through simulated payment. No card details or real money are involved.

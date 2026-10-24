@@ -55,7 +55,7 @@ export function SetupChecklist() {
           },
           {
             title: "Set available hours",
-            detail: "Choose your weekly schedule in UTC.",
+            detail: "Choose weekly hours and your schedule timezone.",
             done: !!hours.data?.length,
             href: expert.data
               ? "/expert-onboarding#weekly-availability"

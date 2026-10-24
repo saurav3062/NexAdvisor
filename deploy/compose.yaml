@@ -1,8 +1,15 @@
 name: nexadvisor
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
 services:
   db:
     image: postgres:17
     restart: unless-stopped
+    init: true
+    logging: *default-logging
     environment:
       POSTGRES_DB: nexadvisor
       POSTGRES_USER: nexadvisor
@@ -19,6 +26,8 @@ services:
       context: ..
       dockerfile: backend/Dockerfile
     restart: unless-stopped
+    init: true
+    logging: *default-logging
     depends_on:
       db:
         condition: service_healthy
@@ -29,6 +38,9 @@ services:
       DATABASE_USER: nexadvisor
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD}
       COOKIE_SECURE: 'true'
+      SERVER_FORWARD_HEADERS_STRATEGY: native
+      COMMISSION_BPS: '2500'
+      CASHFREE_WEBHOOK_SECRET: ${CASHFREE_WEBHOOK_SECRET:-}
       PAYMENT_SIMULATION_ENABLED: 'true'
       PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?Set PUBLIC_ORIGIN}
       MAIL_MODE: PREVIEW
@@ -37,6 +49,12 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     volumes:
       - mail-previews:/app/data/mail-preview
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --max-time, '4', http://127.0.0.1:8081/actuator/health]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 12
   web:
     build:
       context: ..
@@ -44,12 +62,15 @@ services:
       args:
         BACKEND_URL: http://api:8081
     restart: unless-stopped
+    init: true
+    logging: *default-logging
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     ports:
       - '127.0.0.1:${WEB_PORT:-3000}:3000'
     healthcheck:
-      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/api/v1/categories', {signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       start_period: 30s

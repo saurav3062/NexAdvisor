@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "react-hot-toast";
+import { ApiError } from "@/lib/nexadvisor-api";
+import { NetworkNotice } from "@/components/common/NetworkNotice";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AppErrorBoundary } from "@/components/common/ErrorBoundary";
 import { Navbar } from "@/components/layout/Navbar";
@@ -15,9 +17,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
     () =>
       new QueryClient({
         defaultOptions: {
+          mutations: { retry: false },
           queries: {
             staleTime: 5 * 60 * 1000,
-            retry: 1,
+            retry: (count, error) =>
+              count < 1 &&
+              (!(error instanceof ApiError) ||
+                error.status === 0 ||
+                error.status >= 500),
             refetchOnWindowFocus: true,
           },
         },
@@ -51,6 +58,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             </a>
             <Navbar />
             <VerificationBanner />
+            <NetworkNotice />
             <main id="main-content" className="flex-grow">
               {children}
             </main>

@@ -70,6 +70,7 @@ export function AccountLinks() {
         ["/payments", "Payment history"],
         ["/profile", "Profile"],
         ["/favorites", "Saved experts"],
+        ["/support", "Support"],
       ].map(([url, label]) => (
         <Link className="text-blue-600" href={url} key={url}>
           {label}

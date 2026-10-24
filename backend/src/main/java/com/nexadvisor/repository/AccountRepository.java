@@ -14,21 +14,22 @@ public class AccountRepository {
   }
 
   public Optional<Account> find(UUID id) {
-    return db.sql("SELECT id,email,name,role,bio,location,email_verified FROM accounts WHERE id=?")
+    return db.sql(
+            "SELECT id,email,name,role,bio,location,email_verified FROM accounts WHERE id=? AND disabled=FALSE AND suspended=FALSE")
         .param(id)
         .query(Account.class)
         .optional();
   }
 
   public Optional<UUID> idByEmail(String email) {
-    return db.sql("SELECT id FROM accounts WHERE email=?")
+    return db.sql("SELECT id FROM accounts WHERE email=? AND disabled=FALSE")
         .param(email)
         .query(UUID.class)
         .optional();
   }
 
   public String password(UUID id) {
-    return db.sql("SELECT password_hash FROM accounts WHERE id=?")
+    return db.sql("SELECT password_hash FROM accounts WHERE id=? AND disabled=FALSE")
         .param(id)
         .query(String.class)
         .single();

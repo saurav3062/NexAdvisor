@@ -47,6 +47,7 @@ public class ExpertPhotoService {
     accounts.requireRole(actor, "EXPERT");
     accounts.requireVerified(actor);
     locks.lock(actor);
+    accounts.get(actor);
     var expert =
         experts
             .mine(actor)

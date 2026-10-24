@@ -28,3 +28,10 @@ dist-ssr
 .env*
 !.env.example
 backups/
+
+# Private operations state and credentials
+deploy/operations/*.env
+ops-state/
+*.dump
+
+!.env.local.example

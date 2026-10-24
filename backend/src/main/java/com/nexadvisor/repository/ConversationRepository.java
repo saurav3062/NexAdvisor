@@ -32,9 +32,9 @@ public class ConversationRepository {
         .list();
   }
 
-  public void message(UUID booking, UUID actor, String content) {
-    db.sql("INSERT INTO messages(id,booking_id,sender_id,content) VALUES(?,?,?,?)")
-        .params(UUID.randomUUID(), booking, actor, content)
+  public void message(UUID booking, UUID actor, String content, UUID key) {
+    db.sql("INSERT INTO messages(id,booking_id,sender_id,content,request_key) VALUES(?,?,?,?,?)")
+        .params(UUID.randomUUID(), booking, actor, content, key)
         .update();
   }
 
@@ -58,5 +58,13 @@ public class ConversationRepository {
         .param(expert)
         .query(Review.class)
         .list();
+  }
+
+  public Optional<Message> byRequest(UUID actor, UUID key) {
+    return db.sql(
+            "SELECT m.id,m.booking_id,m.sender_id,a.name AS sender_name,m.content,m.created_at FROM messages m JOIN accounts a ON a.id=m.sender_id WHERE m.sender_id=? AND m.request_key=?")
+        .params(actor, key)
+        .query(Message.class)
+        .optional();
   }
 }

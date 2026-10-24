@@ -7,6 +7,11 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+    prefix = "nexadvisor.jobs",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
 public class BookingExpiryJob {
   private final BookingRepository repository;
   private final BookingService bookings;
@@ -20,6 +25,6 @@ public class BookingExpiryJob {
 
   @Scheduled(fixedDelay = 60000, initialDelay = 60000)
   public void expire() {
-    for (var id : repository.expired(clock.instant())) bookings.expire(id);
+    JobBatch.run("booking-expiry", repository.expired(clock.instant()), bookings::expire);
   }
 }

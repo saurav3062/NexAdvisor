@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { backupFresh,remoteRepository } from "./common.mjs";
+const now=Date.now();
+assert.equal(backupFresh(null,now),false);
+assert.equal(backupFresh({completedAt:new Date(now-25*3600000).toISOString()},now),true);
+assert.equal(backupFresh({completedAt:new Date(now-27*3600000).toISOString()},now),false);
+assert.equal(backupFresh({completedAt:new Date(now+3600000).toISOString()},now),false);
+assert.equal(remoteRepository("/local/backup"),false);
+assert.equal(remoteRepository("rest:http://insecure/"),false);
+assert.equal(remoteRepository("s3:s3.example.invalid/private-bucket"),true);
+console.log("Operational guard checks passed");

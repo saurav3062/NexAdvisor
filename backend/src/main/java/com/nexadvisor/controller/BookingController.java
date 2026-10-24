@@ -27,9 +27,9 @@ public class BookingController {
         "simulationEnabled",
         payments.enabled(),
         "currency",
-        "USD",
+        "INR",
         "scheduleTimezone",
-        "UTC");
+        "EXPERT_LOCAL");
   }
 
   @GetMapping("/me/booking-counts")

@@ -75,7 +75,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     name: string,
     role: "client" | "expert",
   ) {
-    await api("/auth/register", "POST", { email, password, name, role });
+    await api("/auth/register", "POST", {
+      email,
+      password,
+      name,
+      role,
+      policyVersion: "2026-10-17",
+    });
     await signIn(email, password);
   }
   async function signOut() {

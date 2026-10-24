@@ -139,7 +139,7 @@ function Editor({ expert }: { expert?: ExpertProfile }) {
         </label>
         <div className="grid sm:grid-cols-2 gap-4">
           <label>
-            Hourly rate (USD)
+            Hourly rate ({expert?.currency || "INR"})
             <input
               type="number"
               required
@@ -189,33 +189,52 @@ function Editor({ expert }: { expert?: ExpertProfile }) {
           availability.
         </p>
       )}
-      {saved && <Schedule />}
+      {saved && <Schedule timezone={expert?.scheduleTimezone || "UTC"} />}
     </div>
   );
 }
-function Schedule() {
+function Schedule({ timezone }: { timezone: string }) {
   const q = useQuery({
     queryKey: ["my-hours"],
     queryFn: () => api<Hours[]>("/me/availability"),
   });
   return (
     <section id="weekly-availability" className={card + " scroll-mt-28"}>
-      <h2 className="text-xl font-semibold mb-2">Weekly availability (UTC)</h2>
+      <h2 className="text-xl font-semibold mb-2">Weekly availability</h2>
       <p className="text-gray-500 mb-4">
-        Choose hours on half-hour boundaries. Existing bookings remain reserved
+        Choose recurring hours in your timezone on half-hour boundaries.
+        Daylight-saving gaps and sessions spanning a clock change are skipped.
+        Repeated times show their UTC offset. Existing bookings remain reserved
         when hours change.
       </p>
       <QueryState loading={q.isLoading} error={q.error} />
-      {q.data && <ScheduleForm key={JSON.stringify(q.data)} initial={q.data} />}
+      {q.data && (
+        <ScheduleForm
+          key={JSON.stringify(q.data) + timezone}
+          initial={q.data}
+          initialZone={timezone}
+        />
+      )}
     </section>
   );
 }
-function ScheduleForm({ initial }: { initial: Hours[] }) {
+function ScheduleForm({
+  initial,
+  initialZone,
+}: {
+  initial: Hours[];
+  initialZone: string;
+}) {
+  const [timezone, setTimezone] = useState(initialZone);
   const cache = useQueryClient();
   const [days, setDays] = useState(initial);
   const save = useMutation({
-    mutationFn: () => api("/me/availability", "PUT", { days }),
-    onSuccess: () => cache.invalidateQueries({ queryKey: ["my-hours"] }),
+    mutationFn: () => api("/me/availability", "PUT", { days, timezone }),
+    onSuccess: () => {
+      cache.invalidateQueries({ queryKey: ["my-hours"] });
+      cache.invalidateQueries({ queryKey: ["my-expert"] });
+      cache.invalidateQueries({ queryKey: ["slots"] });
+    },
   });
   const time = (n: number) =>
     String(Math.floor(n / 60)).padStart(2, "0") +
@@ -233,6 +252,30 @@ function ScheduleForm({ initial }: { initial: Hours[] }) {
       }}
       className="space-y-3"
     >
+      <label className="block">
+        Schedule timezone
+        <select
+          className={input}
+          value={timezone}
+          onChange={(e) => setTimezone(e.target.value)}
+        >
+          {Array.from(
+            new Set([
+              "UTC",
+              "Asia/Kolkata",
+              initialZone,
+              ...Intl.supportedValuesOf("timeZone"),
+            ]),
+          ).map((zone) => (
+            <option key={zone}>{zone}</option>
+          ))}
+        </select>
+      </label>
+      <p className="text-sm text-slate-500">
+        Changing timezone keeps the entered clock hours and affects future
+        availability only. Existing appointments keep their exact time. An end
+        time of 00:00 means midnight at the end of that day.
+      </p>
       {[
         "Monday",
         "Tuesday",
@@ -290,12 +333,12 @@ function ScheduleForm({ initial }: { initial: Hours[] }) {
                   required
                   type="time"
                   step={1800}
-                  value={time(day.endMinute)}
+                  value={time(day.endMinute % 1440)}
                   onChange={(e) =>
                     setDays(
                       days.map((d) =>
                         d === day
-                          ? { ...d, endMinute: minute(e.target.value) }
+                          ? { ...d, endMinute: minute(e.target.value) || 1440 }
                           : d,
                       ),
                     )

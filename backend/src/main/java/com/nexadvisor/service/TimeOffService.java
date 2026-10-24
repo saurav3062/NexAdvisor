@@ -48,6 +48,7 @@ public class TimeOffService {
     UUID id = expert(actor);
     accounts.requireVerified(actor);
     locks.lock(actor);
+    accounts.get(actor);
     ApiException.require(
         start.isAfter(clock.instant())
             && end.isAfter(start)
@@ -72,6 +73,7 @@ public class TimeOffService {
   public void remove(UUID actor, UUID block) {
     UUID id = expert(actor);
     locks.lock(actor);
+    accounts.get(actor);
     ApiException.require(repo.remove(id, block) > 0, 404, "Time off not found");
   }
 }

@@ -55,6 +55,8 @@ export function Footer() {
               {[
                 ["/experts", "Find experts"],
                 ["/how-it-works", "How it works"],
+                ["/policies", "Terms, privacy & refunds"],
+                ["/support", "Contact & support"],
                 ["/signup", "Become a member"],
               ].map(([href, label]) => (
                 <li key={href}>

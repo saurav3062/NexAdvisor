@@ -1,6 +1,6 @@
 "use client";
 import { usePaged, LoadMore } from "@/features/shared/Pagination";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, type Message } from "@/lib/nexadvisor-api";
@@ -32,6 +32,11 @@ export function Conversations({ reviews = false }: { reviews?: boolean }) {
           onChange={(e) => setSelected(e.target.value)}
         >
           <option value="">Select a booking</option>
+          {selected && !options?.some((b) => b.id === selected) && (
+            <option value={selected}>
+              Selected booking · {selected.slice(0, 8)}
+            </option>
+          )}
           {options?.map((b) => (
             <option key={b.id} value={b.id}>
               {b.expertName} / {b.clientName} ·{" "}
@@ -53,15 +58,23 @@ export function Conversations({ reviews = false }: { reviews?: boolean }) {
 function Messages({ id }: { id: string }) {
   const cache = useQueryClient();
   const [content, setContent] = useState("");
+  const requestKey = useRef<string | null>(null);
   const q = usePaged<Message>(
     ["messages", id],
     "/bookings/" + id + "/messages",
     10000,
   );
   const send = useMutation({
-    mutationFn: () => api("/bookings/" + id + "/messages", "POST", { content }),
+    mutationFn: () => {
+      requestKey.current ??= crypto.randomUUID();
+      return api("/bookings/" + id + "/messages", "POST", {
+        content,
+        requestKey: requestKey.current,
+      });
+    },
     onSuccess: () => {
       setContent("");
+      requestKey.current = null;
       cache.invalidateQueries({ queryKey: ["messages", id] });
     },
   });
@@ -98,7 +111,10 @@ function Messages({ id }: { id: string }) {
           disabled={send.isPending}
           className={input}
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={(e) => {
+            setContent(e.target.value);
+            requestKey.current = null;
+          }}
         />
         <button
           disabled={send.isPending || !content.trim()}

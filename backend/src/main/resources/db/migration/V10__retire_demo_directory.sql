@@ -1,0 +1,1 @@
+UPDATE experts SET status='REJECTED',review_note='Fictional demo profile retired before launch' WHERE account_id IN (SELECT id FROM accounts WHERE email IN ('demo-expert-0@nexadvisor.invalid','demo-expert-1@nexadvisor.invalid','demo-expert-2@nexadvisor.invalid'));

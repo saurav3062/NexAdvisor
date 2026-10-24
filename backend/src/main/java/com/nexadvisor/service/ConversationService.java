@@ -28,8 +28,19 @@ public class ConversationService {
   @Transactional
   public void message(UUID actor, UUID booking, Message in) {
     var b = bookings.lockOwned(actor, booking);
+    if (in.requestKey() != null) {
+      var prior = repository.byRequest(actor, in.requestKey());
+      if (prior.isPresent()) {
+        ApiException.require(
+            prior.get().bookingId().equals(booking)
+                && prior.get().content().equals(in.content().strip()),
+            409,
+            "Request key already used for another message");
+        return;
+      }
+    }
     ApiException.require(!b.status().equals("CANCELLED"), 409, "This booking is cancelled");
-    repository.message(booking, actor, in.content().strip());
+    repository.message(booking, actor, in.content().strip(), in.requestKey());
   }
 
   @Transactional

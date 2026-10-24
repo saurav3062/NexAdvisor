@@ -53,7 +53,9 @@ public class PasswordRecoveryService {
     var id = accounts.idByEmail(email.strip().toLowerCase(Locale.ROOT));
     if (id.isEmpty()) return;
     accounts.lock(id.get());
-    mail.invalidateRecovery(accounts.find(id.get()).orElseThrow().email());
+    var account = accounts.find(id.get());
+    if (account.isEmpty()) return;
+    mail.invalidateRecovery(account.get().email());
     byte[] bytes = new byte[32];
     random.nextBytes(bytes);
     String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
@@ -61,7 +63,7 @@ public class PasswordRecoveryService {
     recovery.replace(id.get(), digest(token), expires);
     mail.enqueue(
         "reset:" + UUID.randomUUID(),
-        accounts.find(id.get()).orElseThrow().email(),
+        account.get().email(),
         "Reset your NexAdvisor password",
         "Use this single-use link within 30 minutes:\n"
             + settings.origin
@@ -80,6 +82,8 @@ public class PasswordRecoveryService {
             .account(hash)
             .orElseThrow(() -> new ApiException(400, "This reset link is invalid or expired"));
     accounts.lock(id);
+    ApiException.require(
+        accounts.find(id).isPresent(), 400, "This reset link is invalid or expired");
     ApiException.require(
         recovery.consume(hash, clock.instant()), 400, "This reset link is invalid or expired");
     recovery.password(id, passwords.encode(password));

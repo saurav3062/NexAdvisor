@@ -41,7 +41,7 @@ Both application processes run as non-root users.
   limits, log rotation, disk alerts and host monitoring.
 - Supply your actual privacy/terms/contact information and deletion process.
 - Check `docker compose --env-file deploy/.env -f deploy/compose.yaml ps` and
-  API logs. Frontend health only checks its homepage, not email or the database.
+  API logs. Health checks cover the API/database and the frontend-to-API route; they do not validate external email or meeting providers.
 
 Payments and emails are intentionally simulated. There is no payment provider integration.
 Email previews are stored in the private `mail-previews` Docker volume at
@@ -112,3 +112,13 @@ Local configuration checks and the Next.js production build are tested separatel
 The Docker engine was unavailable in the development environment when these
 files were added. Full container startup, private preview access, HTTPS and a restore
 drill must be verified on the deployment host before launch.
+
+## Operational extensions
+
+See [launch operations](../docs/LAUNCH-OPERATIONS.md) for monitoring, alerts, encrypted off-host backups, Nginx rate limits and systemd timers. Templates are supplied; installation and hosted restore verification are still required.
+
+## Console shortcut
+
+Use `npm run deploy -- init https://YOUR-DOMAIN admin@YOUR-DOMAIN` once to generate private settings without overwriting an existing file. Then use `npm run deploy -- up`. No npm dependency install is needed on the host. This validates settings, builds containers and waits up to 180 seconds for health checks (after builds). `status`, `logs`, `stop`, and `check` use the same configuration. A failed readiness check returns a nonzero status and leaves containers available for diagnosis; inspect logs and retry after fixing the cause. No command removes database volumes. The `up` command is also the update command; take an off-host backup first.
+
+PostgreSQL must become healthy before the API starts; the API must become healthy before the frontend starts. The frontend probe checks the proxied categories API, not just an HTML page. Container logs rotate at 10 MB, retaining three files per service. An unhealthy status is visible to operators; Docker restart policies restart exited processes, not merely unhealthy ones, so keep the monitoring timers enabled.

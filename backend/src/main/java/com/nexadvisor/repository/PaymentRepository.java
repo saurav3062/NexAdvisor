@@ -20,12 +20,15 @@ public class PaymentRepository {
       String clientName) {}
 
   private final JdbcClient db;
+  private final FinanceRepository finance;
 
-  public PaymentRepository(JdbcClient db) {
+  public PaymentRepository(JdbcClient db, FinanceRepository finance) {
     this.db = db;
+    this.finance = finance;
   }
 
   public void charge(Booking b) {
+    finance.capture(b);
     db.sql(
             "INSERT INTO payments(id,booking_id,amount_minor,currency,status) VALUES(?,?,?,?,'SIMULATED_PAID')")
         .params(UUID.randomUUID(), b.id(), b.amountMinor(), b.currency())
@@ -33,6 +36,7 @@ public class PaymentRepository {
   }
 
   public void refund(UUID id) {
+    finance.refund(id);
     db.sql(
             "UPDATE payments SET status='SIMULATED_REFUNDED' WHERE booking_id=? AND status='SIMULATED_PAID'")
         .param(id)

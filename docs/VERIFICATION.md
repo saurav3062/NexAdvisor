@@ -59,3 +59,44 @@ The app remains at http://127.0.0.1:3000. See `docs/COMMUNICATIONS.md` for verif
 - 38 integration tests passed on H2 and PostgreSQL 17.11. Coverage includes photo privacy, normalization, invalid types/dimensions, replace/remove, CSRF, upcoming ordering and ownership.
 - Frontend lint, format, TypeScript/build and API/calendar/deployment checks passed. Browser photo upload on a private synthetic expert persisted through reload and decoded as 384 × 384; setup progress updated immediately. Desktop and 390px expert onboarding/dashboard overflow checks passed. Client dashboard rendering verified.
 - Local H2 database backed up while stopped to backend/data/backups/before-expert-photos-20261017.mv.db before V6 migration. No real expert photos or fabricated portraits were added to public listings. One private QA profile contains an app screenshot used as an upload fixture.
+
+## Launch operations — 17 October 2026
+
+- 47 backend integration tests passed on H2 and PostgreSQL 17.11. Added commission snapshots, idempotent financial actions, cancellation cutoff, issue ownership, payout holds/recovery, deletion review/obligation checks, account anonymization, policy consent, raw-body signature verification and receipt-only callback deduplication.
+- PostgreSQL upgraded from V6 through V10 successfully. Local demo database backup created at backend/data/backups/before-launch-operations-20261017.mv.db before applying operations migrations. Known fictional seed profiles retired.
+- Frontend lint, TypeScript/production build, API/calendar/deployment tests and operational guard checks passed.
+- Debian Nginx/systemd/backup/monitoring templates and installation guide supplied. No real Cashfree API transaction, hosted deployment, off-host backup or remote restore has been performed. Physical iOS/Android/Zoom/Meet acceptance and final policy/business review remain operator work.
+
+## Scheduling and account controls — 2026-10-18
+- 58 backend tests passed on H2 and PostgreSQL 17.11: 55 integration tests plus 3 DST/local-time tests.
+- Covered mutual reschedule consent, unchanged original reservation pending acceptance, conflicting/concurrent acceptance, preserved price/duration, stale meeting-link removal, notification invalidation, missing-link privacy/deduplication, account restriction enforcement and password/verification/obligation checks for self-service closure.
+- Frontend production build completed; lint, type checks, API-client regression checks and calendar export checks passed.
+- Local demo database backed up before V11; V11 migrated successfully and the app restarted at http://127.0.0.1:3000 with backend port 8081.
+- Browser inspected the updated account-closure form and booking navigation using an existing synthetic test account. No real account was deleted or restricted during browser verification.
+- This does not establish real email delivery, live payment processing, actual video attendance or acceptance on the Debian production host.
+
+## Console startup and deployment preparation — 2026-10-18
+- `npm start` now builds and starts backend plus frontend in one console, waits for API and proxied database health, and prints the local URL. Tested the complete build/start path on Windows. Both health endpoints returned 200.
+- Sent Ctrl+C to the full-app console: observed graceful backend/database shutdown and verified both ports 3000 and 8081 were released. `start:fast` reuses the builds; `dev` starts both services with frontend hot reload.
+- Six launcher tests pass (port conflicts, readiness/retry/cancellation, generated configuration, injection rejection and data-preserving deployment commands). Existing deployment and operations checks pass; frontend build, lint and formatting checks pass.
+- Docker Compose configuration validates with synthetic settings. Added dependency health gating, API/proxied frontend probes and bounded logs. Added CI coverage for launcher tests and Compose configuration validation.
+- Docker Engine is unavailable locally. Container image builds/full Compose launch and Debian HTTPS, backups and restore acceptance remain to be verified on the actual server. No deployment credentials or server access were provided, and nothing was deployed remotely.
+
+
+## Reliability and authenticated acceptance — 19 October 2026
+
+- 70 backend tests passed on both H2 and PostgreSQL 17.11: 63 integration tests, 3 timezone/DST tests, 2 safe-error tests, 1 job-isolation test and 1 test-database guard test. PostgreSQL `verify` also passed packaging and formatting checks.
+- The authenticated HTTP journey uses real login/session cookies, then reservation, simulated payment, mutually accepted reschedule, Google Meet link, duplicate message submission, cancellation/refund and self-service closure/session revocation.
+- Added checks for original booking retries after rescheduling, cancelled proposals/stale notifications, restricted recovery/verification, atomic shared throttling, safe error references and duplicate message keys. Database outage tests exercise the exception handler; they are not a production failover drill.
+- Frontend lint, type checking, formatting, API regression, calendar, six launcher tests, deployment configuration and operational guard checks passed. Production Next.js build completed.
+- Stopped local H2 backed up to `backend/data/backups/before-reliability-20261019.mv.db`; V12 migrated successfully. Started the production builds with `npm run start:fast`. Homepage, experts, login, proxied categories, API health and correlated invalid-request responses passed live HTTP checks at localhost:3000/API:8081.
+- Temporary PostgreSQL test server stopped after verification. The local app remains running with simulated payments and private preview email.
+- No Docker image startup, Debian deployment, real Cashfree transaction, SMTP delivery, load benchmark, independent security audit or physical-device meeting was performed in this pass. See LAUNCH-GATE.md for the remaining acceptance boundary.
+
+
+## Developer SOP and unified startup — 24 October 2026
+
+- Added docs/DEVELOPER-SOP.md and linked it from the root README and Debian guide. It covers prerequisites, local development, production startup, configuration, routine operations, updates, backups, smoke checks and troubleshooting.
+- Root start.ps1/start.sh and scripts/start.mjs reuse existing launchers. Local mode installs missing npm dependencies before invoking the full-app launcher. First deployment generates private configuration; subsequent deployment preserves it. No new database or service manager was introduced.
+- Nine launcher tests and deployment configuration tests passed. Windows and Git-for-Windows Unix wrapper help commands passed from outside the repository, as did shell syntax checks and rejection of unknown commands. Full local startup correctly rejected an occupied port without terminating the existing service.
+- Docker daemon was unavailable, so container startup was not exercised. No hosted deployment, system-package installation or changes to live secrets were made. Existing application production-build and database test evidence remains in the earlier entries.

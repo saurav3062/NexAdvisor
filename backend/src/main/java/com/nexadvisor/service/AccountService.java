@@ -12,12 +12,23 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AccountService {
   private final AccountRepository accounts;
+  private final org.springframework.jdbc.core.simple.JdbcClient db;
+  private final boolean requirePolicy;
   private final PasswordEncoder passwords;
   private final String dummyHash;
   private final EmailVerificationService verification;
 
-  public AccountService(AccountRepository a, PasswordEncoder p, EmailVerificationService v) {
+  public AccountService(
+      AccountRepository a,
+      PasswordEncoder p,
+      EmailVerificationService v,
+      org.springframework.jdbc.core.simple.JdbcClient db,
+      @org.springframework.beans.factory.annotation.Value(
+              "${nexadvisor.policies.require-acceptance:true}")
+          boolean requirePolicy) {
     verification = v;
+    this.db = db;
+    this.requirePolicy = requirePolicy;
     accounts = a;
     passwords = p;
     dummyHash = p.encode(UUID.randomUUID().toString());
@@ -25,6 +36,10 @@ public class AccountService {
 
   @Transactional
   public Account register(Register in) {
+    ApiException.require(
+        !requirePolicy || "2026-10-17".equals(in.policyVersion()),
+        400,
+        "Accept the current pilot policies to register");
     var email = in.email().strip().toLowerCase(Locale.ROOT);
     ApiException.require(accounts.idByEmail(email).isEmpty(), 409, "Email already registered");
     var id = UUID.randomUUID();
@@ -34,6 +49,10 @@ public class AccountService {
         passwords.encode(in.password()),
         in.name().strip(),
         in.role().toUpperCase(Locale.ROOT));
+    if ("2026-10-17".equals(in.policyVersion()))
+      db.sql("INSERT INTO policy_acceptances(account_id,version) VALUES(?,?)")
+          .params(id, in.policyVersion())
+          .update();
     verification.send(id);
     return get(id);
   }
@@ -51,6 +70,8 @@ public class AccountService {
 
   @Transactional
   public Account update(UUID id, Profile in) {
+    accounts.lock(id);
+    get(id);
     accounts.update(id, in.name().strip(), in.bio().strip(), in.location().strip());
     return get(id);
   }

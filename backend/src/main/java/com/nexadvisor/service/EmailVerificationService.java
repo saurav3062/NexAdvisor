@@ -68,6 +68,8 @@ public class EmailVerificationService {
                 () -> new ApiException(400, "This verification link is invalid or expired"));
     accounts.lock(id);
     ApiException.require(
+        accounts.find(id).isPresent(), 400, "This verification link is invalid or expired");
+    ApiException.require(
         verification.consume(hash, clock.instant()),
         400,
         "This verification link is invalid or expired");

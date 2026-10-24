@@ -12,8 +12,15 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check
+      - run: npm run test:launcher
       - run: npm run test:calendar
       - run: node scripts/test-deployment.mjs
+      - name: Validate deployment Compose
+        env:
+          DATABASE_PASSWORD: ci-configuration-only-password
+          PUBLIC_ORIGIN: https://nexadvisor.in
+        run: docker compose -f deploy/compose.yaml config --quiet
+      - run: node scripts/operations/test.mjs
       - run: node scripts/test-api.cjs
       - run: npm run build
   backend:

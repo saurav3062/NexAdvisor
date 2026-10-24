@@ -4,15 +4,21 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/local-app.mjs --dev",
     "build": "next build",
-    "start": "next start",
+    "start": "node scripts/local-app.mjs",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
     "format": "prettier --write src next.config.mjs",
     "format:check": "prettier --check src next.config.mjs",
     "test:calendar": "node scripts/test-calendar.cjs",
-    "test:api": "node scripts/test-api.cjs"
+    "test:api": "node scripts/test-api.cjs",
+    "start:fast": "node scripts/local-app.mjs --no-build",
+    "dev:web": "next dev",
+    "deploy": "node scripts/deploy.mjs",
+    "test:launcher": "node --test scripts/test-launcher.mjs",
+    "test:deployment": "node scripts/test-deployment.mjs",
+    "launch": "node scripts/start.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.24.1",
@@ -42,6 +48,6 @@
     "prettier": "^3.6.2"
   },
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=22.13.0"
   }
 }

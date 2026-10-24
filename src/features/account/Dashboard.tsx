@@ -1,4 +1,5 @@
 "use client";
+import { MeetingReadiness } from "@/features/bookings/MeetingReadiness";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -49,6 +50,7 @@ export function Dashboard() {
         </Link>
       </div>
       <SetupChecklist />
+      <MeetingReadiness />
       <QueryState loading={counts.isLoading} error={counts.error} />
       <div className="mb-7 grid gap-4 sm:grid-cols-3">
         {[
@@ -177,6 +179,9 @@ export function Dashboard() {
             <div className="mt-2 space-y-1">
               {[
                 ["/profile", "Personal profile"],
+                ["/support", "Booking support"],
+                ["/privacy-requests", "Privacy & account closure"],
+                ...(isExpert ? [["/earnings", "Your earnings"]] : []),
                 ["/favorites", "Saved experts"],
                 ["/payments", "Payment history"],
                 ...(user?.role === "admin"

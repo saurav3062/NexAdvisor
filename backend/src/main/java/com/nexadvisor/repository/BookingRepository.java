@@ -74,6 +74,22 @@ public class BookingRepository {
         > 0;
   }
 
+  public boolean overlapsExcept(
+      UUID expert, UUID client, Instant start, Instant end, Instant now, UUID excluded) {
+    return db.sql(
+                "SELECT COUNT(*) FROM bookings WHERE id<>? AND (status='CONFIRMED' OR (status='PENDING' AND expires_at>?)) AND (expert_id=? OR client_id=?) AND starts_at<? AND ends_at>?")
+            .params(
+                excluded,
+                OffsetDateTime.ofInstant(now, ZoneOffset.UTC),
+                expert,
+                client,
+                OffsetDateTime.ofInstant(end, ZoneOffset.UTC),
+                OffsetDateTime.ofInstant(start, ZoneOffset.UTC))
+            .query(Long.class)
+            .single()
+        > 0;
+  }
+
   public boolean expertBusy(UUID expert, Instant start, Instant end, Instant now) {
     return db.sql(
                 "SELECT COUNT(*) FROM bookings WHERE (status='CONFIRMED' OR (status='PENDING' AND expires_at>?)) AND expert_id=? AND starts_at<? AND ends_at>?")
@@ -89,7 +105,7 @@ public class BookingRepository {
 
   public void insert(Booking b) {
     db.sql(
-            "INSERT INTO bookings(id,expert_id,client_id,starts_at,ends_at,amount_minor,currency,status,notes,request_key,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)")
+            "INSERT INTO bookings(id,expert_id,client_id,starts_at,ends_at,amount_minor,currency,status,notes,request_key,expires_at,original_start) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)")
         .params(
             b.id(),
             b.expertId(),
@@ -101,7 +117,8 @@ public class BookingRepository {
             b.status(),
             b.notes(),
             b.requestKey(),
-            OffsetDateTime.ofInstant(b.expiresAt(), ZoneOffset.UTC))
+            OffsetDateTime.ofInstant(b.expiresAt(), ZoneOffset.UTC),
+            OffsetDateTime.ofInstant(b.startsAt(), ZoneOffset.UTC))
         .update();
   }
 
@@ -117,7 +134,25 @@ public class BookingRepository {
 
   public List<UUID> reminders(Instant now) {
     return db.sql(
-            "SELECT b.id FROM bookings b WHERE b.status='CONFIRMED' AND b.starts_at>? AND b.starts_at<=? AND NOT EXISTS (SELECT 1 FROM mail_outbox m WHERE m.event_key=('booking:' || CAST(b.id AS VARCHAR) || ':REMINDER:once:' || CAST(b.client_id AS VARCHAR))) ORDER BY b.starts_at LIMIT 100")
+            "SELECT b.id FROM bookings b WHERE b.status='CONFIRMED' AND b.starts_at>? AND b.starts_at<=? AND NOT EXISTS (SELECT 1 FROM mail_outbox m WHERE m.booking_id=b.id AND m.notification_kind='REMINDER' AND m.expires_at=b.starts_at AND m.status<>'EXPIRED') ORDER BY b.starts_at LIMIT 100")
+        .params(
+            OffsetDateTime.ofInstant(now, ZoneOffset.UTC),
+            OffsetDateTime.ofInstant(now.plusSeconds(86400), ZoneOffset.UTC))
+        .query(UUID.class)
+        .list();
+  }
+
+  public boolean missingLink(UUID id) {
+    return db.sql("SELECT COUNT(*) FROM booking_meetings WHERE booking_id=?")
+            .param(id)
+            .query(Long.class)
+            .single()
+        == 0;
+  }
+
+  public List<UUID> missingLinkReminders(Instant now) {
+    return db.sql(
+            "SELECT b.id FROM bookings b WHERE b.status='CONFIRMED' AND b.starts_at>? AND b.starts_at<=? AND NOT EXISTS(SELECT 1 FROM booking_meetings m WHERE m.booking_id=b.id) AND NOT EXISTS(SELECT 1 FROM mail_outbox m WHERE m.booking_id=b.id AND m.notification_kind='LINK_REQUIRED' AND m.expires_at=b.starts_at AND m.status<>'EXPIRED') ORDER BY b.starts_at LIMIT 100")
         .params(
             OffsetDateTime.ofInstant(now, ZoneOffset.UTC),
             OffsetDateTime.ofInstant(now.plusSeconds(86400), ZoneOffset.UTC))
@@ -127,11 +162,37 @@ public class BookingRepository {
 
   public void status(UUID id, String status) {
     db.sql("UPDATE bookings SET status=? WHERE id=?").params(status, id).update();
+    if (Set.of("CANCELLED", "COMPLETED").contains(status)) {
+      db.sql(
+              "UPDATE reschedule_requests SET status='DECLINED' WHERE booking_id=? AND status='PENDING'")
+          .param(id)
+          .update();
+      db.sql(
+              "UPDATE mail_outbox SET status='EXPIRED' WHERE booking_id=? AND status IN ('PENDING','FAILED') AND notification_kind<>'CANCELLED'")
+          .param(id)
+          .update();
+    }
   }
 
   public void event(UUID id, UUID actor, String event) {
     db.sql("INSERT INTO booking_events(id,booking_id,actor_id,event_type) VALUES(?,?,?,?)")
         .params(UUID.randomUUID(), id, actor, event)
         .update();
+  }
+
+  public String reminderVersion(UUID id) {
+    return db.sql(
+            "SELECT COUNT(*) FROM reschedule_requests WHERE booking_id=? AND status='ACCEPTED'")
+        .param(id)
+        .query(Long.class)
+        .single()
+        .toString();
+  }
+
+  public Instant originalStart(UUID id) {
+    return db.sql("SELECT original_start FROM bookings WHERE id=?")
+        .param(id)
+        .query(Instant.class)
+        .single();
   }
 }

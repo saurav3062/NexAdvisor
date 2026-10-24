@@ -1,4 +1,5 @@
 "use client";
+import { MeetingReadiness } from "@/features/bookings/MeetingReadiness";
 import Link from "next/link";
 import { usePaged, LoadMore } from "@/features/shared/Pagination";
 import { downloadCalendar } from "@/lib/calendar";
@@ -35,6 +36,7 @@ export function Bookings() {
   return (
     <Workspace title="Your bookings">
       <AccountLinks />
+      <MeetingReadiness />
       <QueryState loading={q.isLoading} error={q.error} />
       {action.error && (
         <p role="alert" className="text-red-600 mb-4">
@@ -84,6 +86,15 @@ export function Bookings() {
               </p>
             )}
             <div className="flex flex-wrap gap-3 mt-4">
+              {b.status === "CONFIRMED" &&
+                new Date(b.startsAt) > new Date() && (
+                  <Link
+                    className="text-blue-600 py-2"
+                    href={"/bookings/" + b.id + "/reschedule"}
+                  >
+                    Reschedule
+                  </Link>
+                )}
               {b.status === "PENDING" && b.clientId === user?.id && (
                 <button
                   className={button}
@@ -109,7 +120,7 @@ export function Bookings() {
                     onClick={() => {
                       if (
                         window.confirm(
-                          "Cancel this appointment? The time will become available to others. Any payment refund is simulated.",
+                          "Cancel this appointment? Clients receive a full simulated refund at least one hour before the start. For later cancellations, use Support. Expert cancellations receive a full simulated refund.",
                         )
                       ) {
                         action.mutate({ id: b.id, action: "cancel" });
@@ -135,6 +146,12 @@ export function Bookings() {
                     Mark completed
                   </button>
                 )}
+              <Link
+                className="text-blue-600 py-2"
+                href={"/support?booking=" + b.id}
+              >
+                Get help / request late cancellation
+              </Link>
               <Link
                 className="text-blue-600 py-2"
                 href={"/messages?booking=" + b.id}
